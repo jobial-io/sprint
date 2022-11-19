@@ -51,9 +51,11 @@ lazy val root: Project = project
   .in(file("."))
   .settings(commonSettings)
   .settings(
+    libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % CatsVersion,
       "org.typelevel" %% "cats-free" % CatsVersion,
       "org.typelevel" %% "cats-effect" % CatsEffectVersion,
       "com.typesafe.scala-logging" %% "scala-logging" % ScalaLoggingVersion
+    )
   )
 

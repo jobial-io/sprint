@@ -22,7 +22,6 @@ ThisBuild / javacOptions ++= Seq("-source", "11", "-target", "11")
 ThisBuild / Test / packageBin / publishArtifact := true
 ThisBuild / Test / packageSrc / publishArtifact := true
 ThisBuild / Test / packageDoc / publishArtifact := true
-ThisBuild / Test / fork := true
 ThisBuild / resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
 import sbt.Keys.{description, publishConfiguration}
@@ -35,7 +34,7 @@ lazy val commonSettings = Seq(
   sonatypeProjectHosting := Some(GitHubHosting("jobial-io", "sprint", "orbang@jobial.io")),
   organizationName := "Jobial OÜ",
   licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
-  description := "Scala command line apps made simple - a composable and easy-to-use CLI parser built on Cats",
+  description := "Scala process management and integration",
   addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full),
   scalacOptions ++= (if (scalaBinaryVersion.value != "2.13") Seq("-Ypartial-unification") else Seq())
 )

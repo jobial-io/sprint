@@ -30,6 +30,7 @@ import xerial.sbt.Sonatype._
 lazy val commonSettings = Seq(
   publishConfiguration := publishConfiguration.value.withOverwrite(true),
   publishLocalConfiguration := publishLocalConfiguration.value.withOverwrite(true),
+  publishM2Configuration := publishM2Configuration.value.withOverwrite(true),
   publishTo := publishTo.value.orElse(sonatypePublishToBundle.value),
   sonatypeProjectHosting := Some(GitHubHosting("jobial-io", "sprint", "orbang@jobial.io")),
   organizationName := "Jobial OÜ",

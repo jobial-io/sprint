@@ -4,13 +4,14 @@ import cats.effect.IO
 import cats.implicits.catsSyntaxFlatMapOps
 import io.jobial.sprint.ProcessContext.sysEnv
 import io.jobial.sprint.logging.Logging
-import io.jobial.sprint.util.{CatsUtils, TemporalEffect}
+import io.jobial.sprint.util.TemporalEffect
 import org.apache.commons.io.IOUtils
 
 import java.io.File
 import java.util.concurrent.TimeoutException
 import scala.collection.convert.ImplicitConversions.`map AsScala`
 import scala.concurrent.duration._
+import io.jobial.sprint.util._
 
 case class ProcessInfo(
   process: Process,
@@ -34,7 +35,7 @@ object ProcessContext {
 }
 
 trait ProcessManagement
-  extends CatsUtils with Logging {
+  extends Logging {
 
   implicit def processInfoToProcess(processInfo: ProcessInfo) = processInfo.process
 

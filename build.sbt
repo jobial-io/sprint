@@ -39,13 +39,13 @@ lazy val commonSettings = Seq(
   addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full),
   scalacOptions ++= (if (scalaBinaryVersion.value != "2.13") Seq("-Ypartial-unification") else Seq())
 )
- 
+
 lazy val CatsVersion = "2.7.0"
 lazy val CatsEffectVersion = "3.3.14"
 lazy val ScalaLoggingVersion = "3.9.5"
-lazy val PicocliVersion = "4.7.0"
 lazy val ScalatestVersion = "3.2.14"
 lazy val ZioVersion = "2.0.0-RC6"
+lazy val CommonsIoVersion = "2.8.0"
 
 lazy val root: Project = project
   .in(file("."))
@@ -55,7 +55,8 @@ lazy val root: Project = project
       "org.typelevel" %% "cats-core" % CatsVersion,
       "org.typelevel" %% "cats-free" % CatsVersion,
       "org.typelevel" %% "cats-effect" % CatsEffectVersion,
-      "com.typesafe.scala-logging" %% "scala-logging" % ScalaLoggingVersion
+      "commons-io" % "commons-io" % CommonsIoVersion,
+      "com.typesafe.scala-logging" %% "scala-logging" % ScalaLoggingVersion,
     )
   )
 

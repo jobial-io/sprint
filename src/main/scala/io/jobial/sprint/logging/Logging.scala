@@ -4,25 +4,25 @@ import cats.effect.Sync
 import com.typesafe.scalalogging.LazyLogging
 
 
-trait Logging extends LazyLogging {
+trait Logging[F[_]] extends LazyLogging {
 
-  def trace[F[_] : Sync](msg: => String) = Sync[F].delay(logger.trace(msg))
+  def trace(msg: => String)(implicit sync: Sync[F]) = Sync[F].delay(logger.trace(msg))
 
-  def trace[F[_] : Sync](msg: => String, t: Throwable) = Sync[F].delay(logger.trace(msg, t))
+  def trace(msg: => String, t: Throwable)(implicit sync: Sync[F]) = Sync[F].delay(logger.trace(msg, t))
 
-  def debug[F[_] : Sync](msg: => String) = Sync[F].delay(logger.debug(msg))
+  def debug(msg: => String)(implicit sync: Sync[F]) = Sync[F].delay(logger.debug(msg))
 
-  def debug[F[_] : Sync](msg: => String, t: Throwable) = Sync[F].delay(logger.debug(msg, t))
+  def debug(msg: => String, t: Throwable)(implicit sync: Sync[F]) = Sync[F].delay(logger.debug(msg, t))
 
-  def info[F[_] : Sync](msg: => String) = Sync[F].delay(logger.info(msg))
+  def info(msg: => String)(implicit sync: Sync[F]) = Sync[F].delay(logger.info(msg))
 
-  def info[F[_] : Sync](msg: => String, t: Throwable) = Sync[F].delay(logger.info(msg, t))
+  def info(msg: => String, t: Throwable)(implicit sync: Sync[F]) = Sync[F].delay(logger.info(msg, t))
 
-  def warn[F[_] : Sync](msg: => String) = Sync[F].delay(logger.warn(msg))
+  def warn(msg: => String)(implicit sync: Sync[F]) = Sync[F].delay(logger.warn(msg))
 
-  def warn[F[_] : Sync](msg: => String, t: Throwable) = Sync[F].delay(logger.warn(msg, t))
+  def warn(msg: => String, t: Throwable)(implicit sync: Sync[F]) = Sync[F].delay(logger.warn(msg, t))
 
-  def error[F[_] : Sync](msg: => String) = Sync[F].delay(logger.error(msg))
+  def error(msg: => String)(implicit sync: Sync[F]) = Sync[F].delay(logger.error(msg))
 
-  def error[F[_] : Sync](msg: => String, t: Throwable) = Sync[F].delay(logger.error(msg, t))
+  def error(msg: => String, t: Throwable)(implicit sync: Sync[F]) = Sync[F].delay(logger.error(msg, t))
 }

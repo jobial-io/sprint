@@ -4,14 +4,13 @@ import cats.effect.IO
 import cats.implicits.catsSyntaxFlatMapOps
 import io.jobial.sprint.ProcessContext.sysEnv
 import io.jobial.sprint.logging.Logging
-import io.jobial.sprint.util.TemporalEffect
+import io.jobial.sprint.util.{TemporalEffect, _}
 import org.apache.commons.io.IOUtils
 
 import java.io.File
 import java.util.concurrent.TimeoutException
 import scala.collection.convert.ImplicitConversions.`map AsScala`
 import scala.concurrent.duration._
-import io.jobial.sprint.util._
 
 case class ProcessInfo(
   process: Process,
@@ -34,8 +33,7 @@ object ProcessContext {
   val sysEnv = sys.env
 }
 
-trait ProcessManagement
-  extends Logging {
+trait ProcessManagement extends Logging[IO] {
 
   implicit def processInfoToProcess(processInfo: ProcessInfo) = processInfo.process
 
@@ -86,7 +84,7 @@ trait ProcessManagement
         }
         builder.start
       }
-      _ <- debug[IO](s"started $process for ${command.mkString(" ")}")
+      _ <- debug(s"started $process for ${command.mkString(" ")}")
     } yield ProcessInfo(process, command.toList)
 
   def waitForProcessOrKill(process: ProcessInfo, timeout: FiniteDuration)(implicit processContext: ProcessContext) =

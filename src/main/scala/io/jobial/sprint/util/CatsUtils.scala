@@ -1,59 +1,59 @@
 package io.jobial.sprint.util
 
-import cats.{Applicative, Monad, MonadError, Parallel, Traverse}
 import cats.effect._
 import cats.effect.std.Queue
 import cats.implicits._
+import cats.{Applicative, Monad, MonadError, Parallel, Traverse}
 
 import java.util.concurrent.{CancellationException, ExecutionException, TimeUnit}
-import scala.concurrent.{ExecutionContext, Future, TimeoutException}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.{ExecutionContext, Future, TimeoutException}
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-trait CatsUtils {
+trait CatsUtils[F[_]] {
 
-  def whenA[F[_] : Monad, A](cond: Boolean)(f: => F[A]): F[Unit] =
-    if (cond) Monad[F].void(f) else Monad[F].unit
-
-  // Monad would be enough here but Sync avoids some implicit clashes without causing any restrictions in practice
-  def unit[F[_] : Sync] = Monad[F].unit
+  def whenA[A](cond: Boolean)(f: => F[A])(implicit F: Monad[F]): F[Unit] =
+    if (cond) F.void(f) else F.unit
 
   // Monad would be enough here but Sync avoids some implicit clashes without causing any restrictions in practice
-  def pure[F[_] : Sync, A](a: A) = Monad[F].pure(a)
+  def unit(implicit F: Monad[F]) = F.unit
+
+  // Monad would be enough here but Sync avoids some implicit clashes without causing any restrictions in practice
+  def pure[A](a: A)(implicit F: Monad[F]) = F.pure(a)
 
   type MonadErrorWithThrowable[F[_]] = MonadError[F, Throwable]
 
-  def raiseError[F[_] : ConcurrentEffect, A](t: Throwable) = implicitly[MonadErrorWithThrowable[F]].raiseError[A](t)
+  def raiseError[A](t: Throwable)(implicit F: MonadErrorWithThrowable[F]) = F.raiseError[A](t)
 
-  def delay[F[_] : ConcurrentEffect, A](f: => A) = Sync[F].delay(f)
+  def delay[A](f: => A)(implicit F: Sync[F]) = F.delay(f)
 
-  def blocking[F[_] : ConcurrentEffect, A](f: => A) = Sync[F].blocking(f)
+  def blocking[A](f: => A)(implicit F: Sync[F]) = F.blocking(f)
 
-  def defer[F[_] : ConcurrentEffect, A](f: => F[A]) = Sync[F].defer(f)
+  def defer[A](f: => F[A])(implicit F: Sync[F]) = Sync[F].defer(f)
 
-  def liftIO[F[_] : LiftIO, A](f: IO[A]) = LiftIO[F].liftIO(f)
+  def liftIO[A](f: IO[A])(implicit F: LiftIO[F]) = F.liftIO(f)
 
-  def sleep[F[_] : Temporal](duration: FiniteDuration) = Temporal[F].sleep(duration)
+  def sleep(duration: FiniteDuration)(implicit F: Temporal[F]) = F.sleep(duration)
 
-  def start[F[_] : ConcurrentEffect, A](f: F[A]) = Concurrent[F].start(f)
+  def start[A](f: F[A])(implicit F: Concurrent[F]) = F.start(f)
 
-  def fromFuture[F[_] : Async, A](f: => Future[A]): F[A] =
-    Async[F].async { cb =>
+  def fromFuture[A](f: => Future[A])(implicit F: Async[F], ec: ExecutionContext): F[A] =
+    F.async { cb =>
       f.onComplete(r => cb(r match {
         case Success(a) => Right(a)
         case Failure(e) => Left(e)
-      }))(ExecutionContext.Implicits.global)
-      pure[F, Option[F[Unit]]](None)
+      }))(ec)
+      pure[Option[F[Unit]]](None)
     }
 
-  def fromEither[F[_] : ConcurrentEffect, A](e: Either[Throwable, A]): F[A] =
+  def fromEither[A](e: Either[Throwable, A])(implicit F: MonadErrorWithThrowable[F]): F[A] =
     e match {
-      case Right(a) => pure[F, A](a)
+      case Right(a) => pure[A](a)
       case Left(err) => raiseError(err)
     }
 
-  def fromJavaFuture[F[_] : TemporalEffect, A](future: => java.util.concurrent.Future[A], pollTime: FiniteDuration = 10.millis): F[A] =
+  def fromJavaFuture[A](future: => java.util.concurrent.Future[A], pollTime: FiniteDuration = 10.millis)(implicit F: Sync[F]): F[A] =
     for {
       f <- delay(future)
       r <- blocking(f.get(pollTime.toMillis, TimeUnit.MILLISECONDS)).handleErrorWith {
@@ -66,31 +66,32 @@ trait CatsUtils {
       }
     } yield r
 
-  def waitFor[F[_] : TemporalEffect, A](f: => F[A])(cond: A => F[Boolean], pollTime: FiniteDuration = 1.second): F[A] =
+  def waitFor[A](f: => F[A])(cond: A => F[Boolean], pollTime: FiniteDuration = 1.second)(implicit F: Temporal[F]): F[A] =
     for {
       a <- f
       c <- cond(a)
       r <- if (c) pure(a) else sleep(pollTime) >> waitFor(f)(cond, pollTime)
     } yield r
 
-  case class IterableSequenceSyntax[F[_] : Parallel : Applicative, T](l: Iterable[F[T]]) {
+  case class IterableSequenceSyntax[T](l: Iterable[F[T]])(implicit parallel: Parallel[F], applicative: Applicative[F]) {
 
     def parSequence = Parallel.parSequence(l.toList)
 
     def sequence = Traverse[List].sequence(l.toList)
   }
 
-  implicit def iterableToSequenceSyntax[F[_] : Parallel : Applicative, T](l: Iterable[F[T]]) =
+  implicit def iterableToSequenceSyntax[T](l: Iterable[F[T]])(implicit parallel: Parallel[F], applicative: Applicative[F]) =
     IterableSequenceSyntax(l)
 
-  def take[F[_] : TemporalEffect, T](queue: Queue[F, T], timeout: Option[FiniteDuration], pollTime: FiniteDuration = 1.millis): F[T] =
+  def take[T](queue: Queue[F, T], timeout: Option[FiniteDuration], pollTime: FiniteDuration = 1.millis)
+    (implicit F: Temporal[F]): F[T] =
     timeout match {
       case Some(timeout) =>
         for {
           r <- queue.tryTake
           r <- r match {
             case Some(r) =>
-              pure[F, T](r)
+              pure[T](r)
             case None =>
               if (timeout > 0.millis)
                 sleep(pollTime) >>
@@ -106,6 +107,7 @@ trait CatsUtils {
     MonadCancel[F, Throwable].guarantee(fa, finalizer)
 }
 
+object CatsUtils {
 
-
-
+  def apply[F[_]] = new CatsUtils[F] {}
+}

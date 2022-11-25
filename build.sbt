@@ -44,7 +44,6 @@ lazy val CatsVersion = "2.7.0"
 lazy val CatsEffectVersion = "3.3.14"
 lazy val ScalaLoggingVersion = "3.9.5"
 lazy val ScalatestVersion = "3.2.14"
-lazy val ZioVersion = "2.0.0-RC6"
 lazy val CommonsIoVersion = "2.8.0"
 
 lazy val root: Project = project

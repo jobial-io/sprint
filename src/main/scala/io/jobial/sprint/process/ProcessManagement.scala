@@ -24,6 +24,7 @@ case class ProcessContext(
   outputFilename: Option[String] = None,
   errorFilename: Option[String] = None,
   environment: Map[String, String] = sysEnv,
+  timeout: FiniteDuration = 30.minutes,
   // This flag has been added to avoid the dangerous design in ProcessBuilder that redirects to pipes by default, 
   // causing random hanging. See also https://stackoverflow.com/questions/3285408/java-processbuilder-resultant-process-hangs
   keepOutput: Boolean = false
@@ -87,9 +88,9 @@ trait ProcessManagement[F[_]] extends CatsUtils[F] with Logging[F] {
       _ <- debug(s"started $process for ${command.mkString(" ")}")
     } yield ProcessInfo(process, command.toList)
 
-  def waitForProcessOrKill(process: ProcessInfo[F], timeout: FiniteDuration)
+  def waitForProcessOrKill(process: ProcessInfo[F])
     (implicit processContext: ProcessContext, temporal: TemporalEffect[F]) =
-    waitForProcessExit(process, timeout).handleErrorWith { t =>
+    waitForProcessExit(process, processContext.timeout).handleErrorWith { t =>
       killProcess(process)
     } >> {
       if (process.exitValue != 0)
@@ -100,11 +101,11 @@ trait ProcessManagement[F[_]] extends CatsUtils[F] with Logging[F] {
 
   val maxProcessWaitTimeout = 1.day
 
-  def runProcessAndWait(command: Seq[String], timeout: FiniteDuration = maxProcessWaitTimeout)
+  def runProcessAndWait(command: Seq[String])
     (implicit processContext: ProcessContext, temporal: TemporalEffect[F]): F[ProcessInfo[F]] =
     for {
       p <- runProcess(command)
-      r <- waitForProcessOrKill(p, timeout)
+      r <- waitForProcessOrKill(p)
     } yield r
 
   def sync(args: String*)(implicit processContext: ProcessContext, temporal: TemporalEffect[F]) =

@@ -61,7 +61,7 @@ trait ProcessManagement[F[_]] extends CatsUtils[F] with Logging[F] {
   def killProcess(process: ProcessInfo[F], signal: String = "-TERM", timeout: FiniteDuration = defaultKillTimeout, sendSigKillIfNotExited: Boolean = true)
     (implicit processContext: ProcessContext, temporal: TemporalEffect[F]): F[ProcessInfo[F]] =
     kill(signal, process.pid.toString) >>
-      waitForProcessExit(process, timeout).onError { t =>
+      waitForProcessExit(process, timeout).onError { case t =>
         whenA(sendSigKillIfNotExited) {
           killProcess(process, "-KILL", timeout, sendSigKillIfNotExited = false)
         }

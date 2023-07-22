@@ -1,6 +1,8 @@
 package io.jobial.sprint.process
 
+import cats.effect.Concurrent
 import cats.effect.Sync
+import cats.effect.Timer
 import cats.implicits._
 import io.jobial.sprint.logging.Logging
 import io.jobial.sprint.process.ProcessContext.sysEnv
@@ -9,7 +11,7 @@ import org.apache.commons.io.IOUtils
 
 import java.io.File
 import java.util.concurrent.TimeoutException
-import scala.collection.convert.ImplicitConversions.`map AsScala`
+import scala.collection.JavaConversions.mapAsScalaMap
 import scala.concurrent.duration._
 
 case class ProcessInfo[F[_] : Sync](
@@ -40,7 +42,7 @@ trait ProcessManagement[F[_]] extends CatsUtils[F] with Logging[F] {
 
   implicit def processContext = ProcessContext()
 
-  def waitForProcessExit(process: ProcessInfo[F], timeout: FiniteDuration)(implicit temporal: TemporalEffect[F]) = {
+  def waitForProcessExit(process: ProcessInfo[F], timeout: FiniteDuration)(implicit concurrent: Concurrent[F], timer: Timer[F]) = {
     def waitForProcessExit(timeout: FiniteDuration, retry: Double): F[ProcessInfo[F]] =
       if (retry > 0)
         sleep(timeout) >> {
@@ -54,13 +56,13 @@ trait ProcessManagement[F[_]] extends CatsUtils[F] with Logging[F] {
       waitForProcessExit(100.millis, timeout / 100.millis)
   }
 
-  def kill(args: String*)(implicit processContext: ProcessContext, temporal: TemporalEffect[F]) =
+  def kill(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
     runProcess("/bin/kill" +: args)
 
   val defaultKillTimeout = 5.seconds
 
   def killProcess(process: ProcessInfo[F], signal: String = "-TERM", timeout: FiniteDuration = defaultKillTimeout, sendSigKillIfNotExited: Boolean = true)
-    (implicit processContext: ProcessContext, temporal: TemporalEffect[F]): F[ProcessInfo[F]] =
+    (implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]): F[ProcessInfo[F]] =
     kill(signal, process.pid.toString) >>
       waitForProcessExit(process, timeout).onError { case t =>
         whenA(sendSigKillIfNotExited) {
@@ -68,7 +70,7 @@ trait ProcessManagement[F[_]] extends CatsUtils[F] with Logging[F] {
         }
       } >> pure(process)
 
-  def runProcess(command: Seq[String])(implicit processContext: ProcessContext, temporal: TemporalEffect[F]) =
+  def runProcess(command: Seq[String])(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
     for {
       process <- delay {
         val builder = new ProcessBuilder(command: _*)
@@ -89,7 +91,7 @@ trait ProcessManagement[F[_]] extends CatsUtils[F] with Logging[F] {
     } yield ProcessInfo(process, command.toList)
 
   def waitForProcessOrKill(process: ProcessInfo[F])
-    (implicit processContext: ProcessContext, temporal: TemporalEffect[F]) =
+    (implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
     waitForProcessExit(process, processContext.timeout).handleErrorWith { t =>
       killProcess(process)
     } >> {
@@ -102,31 +104,31 @@ trait ProcessManagement[F[_]] extends CatsUtils[F] with Logging[F] {
   val maxProcessWaitTimeout = 1.day
 
   def runProcessAndWait(command: Seq[String])
-    (implicit processContext: ProcessContext, temporal: TemporalEffect[F]): F[ProcessInfo[F]] =
+    (implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]): F[ProcessInfo[F]] =
     for {
       p <- runProcess(command)
       r <- waitForProcessOrKill(p)
     } yield r
 
-  def sync(args: String*)(implicit processContext: ProcessContext, temporal: TemporalEffect[F]) =
+  def sync(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
     runProcessAndWait("/usr/bin/sync" +: args)
 
-  def rm(args: String*)(implicit processContext: ProcessContext, temporal: TemporalEffect[F]) =
+  def rm(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
     runProcessAndWait("/usr/bin/rm" +: args)
 
-  def mv(args: String*)(implicit processContext: ProcessContext, temporal: TemporalEffect[F]) =
+  def mv(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
     runProcessAndWait("/usr/bin/mv" +: args)
 
-  def cp(args: String*)(implicit processContext: ProcessContext, temporal: TemporalEffect[F]) =
+  def cp(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
     runProcessAndWait("/usr/bin/cp" +: args)
 
-  def mkdir(args: String*)(implicit processContext: ProcessContext, temporal: TemporalEffect[F]) =
+  def mkdir(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
     runProcessAndWait("/usr/bin/mkdir" +: args)
 
-  def touch(args: String*)(implicit processContext: ProcessContext, temporal: TemporalEffect[F]) =
+  def touch(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
     runProcessAndWait("/usr/bin/touch" +: args)
 
-  def du(args: String*)(implicit processContext: ProcessContext, temporal: TemporalEffect[F]) =
+  def du(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
     runProcessAndWait("/usr/bin/du" +: args)
 }
 

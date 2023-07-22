@@ -1,7 +1,7 @@
 package io.jobial.sprint.util
 
 import cats.effect._
-import cats.effect.std.Queue
+import cats.effect.concurrent.MVar
 import cats.implicits._
 import cats.{Applicative, Monad, MonadError, Parallel, Traverse}
 
@@ -27,14 +27,12 @@ trait CatsUtils[F[_]] {
   def raiseError[A](t: Throwable)(implicit F: MonadErrorWithThrowable[F]) = F.raiseError[A](t)
 
   def delay[A](f: => A)(implicit F: Sync[F]) = F.delay(f)
-
-  def blocking[A](f: => A)(implicit F: Sync[F]) = F.blocking(f)
-
+  
   def defer[A](f: => F[A])(implicit F: Sync[F]) = Sync[F].defer(f)
 
   def liftIO[A](f: IO[A])(implicit F: LiftIO[F]) = F.liftIO(f)
 
-  def sleep(duration: FiniteDuration)(implicit F: Temporal[F]) = F.sleep(duration)
+  def sleep(duration: FiniteDuration)(implicit F: Timer[F]) = F.sleep(duration)
 
   def start[A](f: F[A])(implicit F: Concurrent[F]) = F.start(f)
 
@@ -53,20 +51,8 @@ trait CatsUtils[F[_]] {
       case Left(err) => raiseError(err)
     }
 
-  def fromJavaFuture[A](future: => java.util.concurrent.Future[A], pollTime: FiniteDuration = 10.millis)(implicit F: Sync[F]): F[A] =
-    for {
-      f <- delay(future)
-      r <- blocking(f.get(pollTime.toMillis, TimeUnit.MILLISECONDS)).handleErrorWith {
-        case t: CancellationException =>
-          raiseError(t)
-        case t: ExecutionException =>
-          raiseError(t.getCause)
-        case _ =>
-          fromJavaFuture(f, pollTime)
-      }
-    } yield r
 
-  def waitFor[A](f: => F[A])(cond: A => F[Boolean], pollTime: FiniteDuration = 1.second)(implicit F: Temporal[F]): F[A] =
+  def waitFor[A](f: => F[A])(cond: A => F[Boolean], pollTime: FiniteDuration = 1.second)(implicit concurrent: Concurrent[F], timer: Timer[F]): F[A] =
     for {
       a <- f
       c <- cond(a)
@@ -83,28 +69,27 @@ trait CatsUtils[F[_]] {
   implicit def iterableToSequenceSyntax[T](l: Iterable[F[T]])(implicit parallel: Parallel[F], applicative: Applicative[F]) =
     IterableSequenceSyntax(l)
 
-  def take[T](queue: Queue[F, T], timeout: Option[FiniteDuration], pollTime: FiniteDuration = 1.millis)
-    (implicit F: Temporal[F]): F[T] =
+  def take[T](mvar: MVar[F, T], timeout: Option[FiniteDuration], pollTime: FiniteDuration = 1.millis)(implicit concurrent: Concurrent[F], timer: Timer[F]): F[T] =
     timeout match {
       case Some(timeout) =>
         for {
-          r <- queue.tryTake
+          r <- mvar.tryTake
           r <- r match {
             case Some(r) =>
-              pure[T](r)
+              pure(r)
             case None =>
               if (timeout > 0.millis)
                 sleep(pollTime) >>
-                  take(queue, Some(timeout - pollTime))
+                  take(mvar, Some(timeout - pollTime))
               else raiseError(new TimeoutException)
           }
         } yield r
       case None =>
-        queue.take
+        mvar.take
     }
 
-  def guarantee[F[_], A](fa: F[A])(finalizer: F[Unit])(implicit bracket: MonadCancel[F, Throwable]): F[A] =
-    MonadCancel[F, Throwable].guarantee(fa, finalizer)
+  def guarantee[A](fa: F[A])(finalizer: F[Unit])(implicit bracket: Bracket[F, Throwable]): F[A] =
+    Bracket[F, Throwable].guarantee(fa)(finalizer)
 }
 
 object CatsUtils {

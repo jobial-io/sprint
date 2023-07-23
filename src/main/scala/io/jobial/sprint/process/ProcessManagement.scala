@@ -8,9 +8,10 @@ import io.jobial.sprint.logging.Logging
 import io.jobial.sprint.process.ProcessContext.sysEnv
 import io.jobial.sprint.util._
 import org.apache.commons.io.IOUtils
-import scala.collection.JavaConverters._
+
 import java.io.File
 import java.util.concurrent.TimeoutException
+import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
 case class ProcessInfo[F[_] : Sync](
@@ -26,9 +27,10 @@ case class ProcessContext(
   errorFilename: Option[String] = None,
   environment: Map[String, String] = sysEnv,
   timeout: FiniteDuration = 30.minutes,
-  // This flag has been added to avoid the dangerous design in ProcessBuilder that redirects to pipes by default, 
+  // This flag has been added to avoid the dangerous design in ProcessBuilder, which redirects to pipes by default, 
   // causing random hanging. See also https://stackoverflow.com/questions/3285408/java-processbuilder-resultant-process-hangs
-  keepOutput: Boolean = false
+  keepOutput: Boolean = false,
+  inheritIO: Boolean = false
 )
 
 object ProcessContext {
@@ -74,11 +76,15 @@ trait ProcessManagement[F[_]] extends CatsUtils[F] with Logging[F] {
       process <- delay {
         val builder = new ProcessBuilder(command: _*)
         processContext.directory.map(d => builder.directory(new File(d)))
-        processContext.outputFilename.map(f => builder.redirectOutput(new File(f))).getOrElse {
-          if (!processContext.keepOutput) builder.redirectOutput(new File("/dev/null"))
-        }
-        processContext.errorFilename.map(f => builder.redirectError(new File(f))).getOrElse {
-          if (!processContext.keepOutput) builder.redirectError(new File("/dev/null"))
+        if (processContext.inheritIO)
+          builder.inheritIO()
+        else {
+          processContext.outputFilename.map(f => builder.redirectOutput(new File(f))).getOrElse {
+            if (!processContext.keepOutput) builder.redirectOutput(new File("/dev/null"))
+          }
+          processContext.errorFilename.map(f => builder.redirectError(new File(f))).getOrElse {
+            if (!processContext.keepOutput) builder.redirectError(new File("/dev/null"))
+          }
         }
         if (processContext.environment ne sysEnv) {
           builder.environment.clear

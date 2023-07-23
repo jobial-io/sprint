@@ -8,10 +8,9 @@ import io.jobial.sprint.logging.Logging
 import io.jobial.sprint.process.ProcessContext.sysEnv
 import io.jobial.sprint.util._
 import org.apache.commons.io.IOUtils
-
+import scala.collection.JavaConverters._
 import java.io.File
 import java.util.concurrent.TimeoutException
-import scala.collection.JavaConversions.mapAsScalaMap
 import scala.concurrent.duration._
 
 case class ProcessInfo[F[_] : Sync](
@@ -83,7 +82,7 @@ trait ProcessManagement[F[_]] extends CatsUtils[F] with Logging[F] {
         }
         if (processContext.environment ne sysEnv) {
           builder.environment.clear
-          builder.environment ++= processContext.environment
+          builder.environment.putAll(processContext.environment.asJava)
         }
         builder.start
       }

@@ -51,6 +51,18 @@ trait CatsUtils[F[_]] {
       case Left(err) => raiseError(err)
     }
 
+  def fromJavaFuture[A](future: => java.util.concurrent.Future[A], pollTime: FiniteDuration = 10.millis)(implicit sync: Sync[F]): F[A] =
+    for {
+      f <- delay(future)
+      r <- delay(f.get(pollTime.toMillis, TimeUnit.MILLISECONDS)).handleErrorWith {
+        case t: CancellationException =>
+          raiseError(t)
+        case t: ExecutionException =>
+          raiseError(t.getCause)
+        case _ =>
+          fromJavaFuture(f, pollTime)
+      }
+    } yield r
 
   def waitFor[A](f: => F[A])(cond: A => F[Boolean], pollTime: FiniteDuration = 1.second)(implicit concurrent: Concurrent[F], timer: Timer[F]): F[A] =
     for {

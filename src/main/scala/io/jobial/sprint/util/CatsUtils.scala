@@ -36,14 +36,26 @@ trait CatsUtils[F[_]] {
 
   def start[A](f: F[A])(implicit F: Concurrent[F]) = F.start(f)
 
-  def fromFuture[A](f: => Future[A])(implicit F: Async[F], ec: ExecutionContext): F[A] =
-    F.async { cb =>
-      f.onComplete(r => cb(r match {
-        case Success(a) => Right(a)
-        case Failure(e) => Left(e)
-      }))(ec)
-      pure[Option[F[Unit]]](None)
+  def fromFuture[A](f: => Future[A])(implicit F: Concurrent[F]): F[A] = {
+    delay(f).flatMap { f =>
+      f.value match {
+        case Some(result) =>
+          result match {
+            case Success(a) => pure(a)
+            case Failure(e) => raiseError(e)
+          }
+        case _ =>
+          Concurrent[F].async { cb =>
+            f.onComplete { r =>
+              cb(r match {
+                case Success(a) => Right(a)
+                case Failure(e) => Left(e)
+              })
+            }(blockerContext)
+          }
+      }
     }
+  }
 
   def fromEither[A](e: Either[Throwable, A])(implicit F: MonadErrorWithThrowable[F]): F[A] =
     e match {

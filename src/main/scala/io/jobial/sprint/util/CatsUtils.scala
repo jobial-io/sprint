@@ -114,6 +114,9 @@ trait CatsUtils[F[_]] {
 
   def guarantee[A](fa: F[A])(finalizer: F[Unit])(implicit bracket: Bracket[F, Throwable]): F[A] =
     Bracket[F, Throwable].guarantee(fa)(finalizer)
+    
+  def printLn(msg: String)(implicit sync: Sync[F]) =
+    delay(println(msg))
 }
 
 object CatsUtils {

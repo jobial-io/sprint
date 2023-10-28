@@ -23,6 +23,7 @@ case class ProcessInfo[F[_] : Sync](
 
 case class ProcessContext(
   directory: Option[String] = None,
+  inputFilename: Option[String] = None,
   outputFilename: Option[String] = None,
   errorFilename: Option[String] = None,
   environment: Map[String, String] = sysEnv,
@@ -79,6 +80,7 @@ trait ProcessManagement[F[_]] extends CatsUtils[F] with Logging[F] {
         if (processContext.inheritIO)
           builder.inheritIO()
         else {
+          processContext.inputFilename.map(f => builder.redirectInput(new File(f)))
           processContext.outputFilename.map(f => builder.redirectOutput(new File(f))).getOrElse {
             if (!processContext.keepOutput) builder.redirectOutput(new File("/dev/null"))
           }

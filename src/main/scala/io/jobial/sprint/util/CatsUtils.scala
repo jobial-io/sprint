@@ -117,6 +117,9 @@ trait CatsUtils[F[_]] {
     
   def printLn(msg: String)(implicit sync: Sync[F]) =
     delay(println(msg))
+
+  def printStr(msg: String)(implicit sync: Sync[F]) =
+    delay(print(msg))
 }
 
 object CatsUtils {

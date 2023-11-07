@@ -59,7 +59,7 @@ trait ProcessManagement[F[_]] extends CatsUtils[F] with Logging[F] {
   }
 
   def kill(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
-    runProcess("/bin/kill" +: args)
+    runProcess("/bin/kill" :: args.toList)
 
   val defaultKillTimeout = 5.seconds
 
@@ -110,33 +110,42 @@ trait ProcessManagement[F[_]] extends CatsUtils[F] with Logging[F] {
 
   val maxProcessWaitTimeout = 1.day
 
-  def runProcessAndWait(command: Seq[String])
+  def runProcessAndWait(command: List[String])
     (implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]): F[ProcessInfo[F]] =
     for {
       p <- runProcess(command)
       r <- waitForProcessOrKill(p)
     } yield r
 
+  def runProcessAndWait(command: String*)
+    (implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]): F[ProcessInfo[F]] =
+    runProcessAndWait(command.toList)
+
   def sync(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
-    runProcessAndWait("/usr/bin/sync" +: args)
+    runProcessAndWait("/usr/bin/sync" :: args.toList)
 
   def rm(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
-    runProcessAndWait("/usr/bin/rm" +: args)
+    runProcessAndWait("/usr/bin/rm" :: args.toList)
 
   def mv(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
-    runProcessAndWait("/usr/bin/mv" +: args)
+    runProcessAndWait("/usr/bin/mv" :: args.toList)
 
   def cp(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
-    runProcessAndWait("/usr/bin/cp" +: args)
+    runProcessAndWait("/usr/bin/cp" :: args.toList)
 
   def mkdir(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
-    runProcessAndWait("/usr/bin/mkdir" +: args)
+    runProcessAndWait("/usr/bin/mkdir" :: args.toList)
 
   def touch(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
-    runProcessAndWait("/usr/bin/touch" +: args)
+    runProcessAndWait("/usr/bin/touch" :: args.toList)
 
   def du(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
-    runProcessAndWait("/usr/bin/du" +: args)
+    runProcessAndWait("/usr/bin/du" :: args.toList)
+
+  def runProcessWithTerminal(args: String*)(implicit concurrent: Concurrent[F], timer: Timer[F]) = {
+    implicit val processContext = ProcessContext(inheritIO = true, environment = sysEnv + ("TERM" -> "xterm-256color"), timeout = 12.hours)
+    runProcessAndWait(args.toList)
+  }
 }
 
 case class ProcessNonZeroExitStatus[F[_]](process: ProcessInfo[F])

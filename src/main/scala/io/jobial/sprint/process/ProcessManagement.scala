@@ -142,10 +142,11 @@ trait ProcessManagement[F[_]] extends CatsUtils[F] with Logging[F] {
   def du(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
     runProcessAndWait("/usr/bin/du" :: args.toList)
 
-  def runProcessWithTerminal(args: String*)(implicit concurrent: Concurrent[F], timer: Timer[F]) = {
-    implicit val processContext = ProcessContext(inheritIO = true, environment = sysEnv + ("TERM" -> "xterm-256color"), timeout = 12.hours)
-    runProcessAndWait(args.toList)
-  }
+  def runProcessWithTerminal(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]): F[ProcessInfo[F]] =
+    runProcessWithTerminal(args.toList)
+
+  def runProcessWithTerminal(args: List[String])(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]): F[ProcessInfo[F]] =
+    runProcessAndWait(args)(processContext.copy(inheritIO = true, environment = processContext.environment + ("TERM" -> "xterm-256color"), timeout = 12.hours), concurrent, timer)
 }
 
 case class ProcessNonZeroExitStatus[F[_]](process: ProcessInfo[F])

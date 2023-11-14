@@ -3,13 +3,23 @@ package io.jobial.sprint.util
 import cats.effect._
 import cats.effect.concurrent.MVar
 import cats.implicits._
-import cats.{Applicative, Monad, MonadError, Parallel, Traverse}
+import cats.Applicative
+import cats.Monad
+import cats.MonadError
+import cats.Parallel
+import cats.Traverse
 
-import java.util.concurrent.{CancellationException, ExecutionException, TimeUnit}
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
-import scala.concurrent.{ExecutionContext, Future, TimeoutException}
+import java.util.concurrent.CancellationException
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
+import scala.Console.RESET
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.Future
+import scala.concurrent.TimeoutException
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
+import scala.util.Failure
+import scala.util.Success
 
 trait CatsUtils[F[_]] {
 
@@ -120,6 +130,9 @@ trait CatsUtils[F[_]] {
 
   def printStr(msg: String)(implicit sync: Sync[F]) =
     delay(print(msg))
+    
+  def printColorLn(msg: String)(implicit sync: Sync[F]) =
+    printLn(s"${RESET}${msg}${RESET}")
 }
 
 object CatsUtils {

@@ -14,9 +14,9 @@
 name := "sprint"
 
 ThisBuild / organization := "io.jobial"
-ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.15", "2.13.8")
-ThisBuild / scalaVersion := "2.11.12"
-ThisBuild / version := "0.1.2"
+ThisBuild / crossScalaVersions := Seq("2.12.15", "2.13.8")
+ThisBuild / scalaVersion := "2.13.8"
+ThisBuild / version := "0.2.0"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
 ThisBuild / javacOptions ++= Seq("-source", "11", "-target", "11")
 ThisBuild / Test / packageBin / publishArtifact := true
@@ -40,8 +40,8 @@ lazy val commonSettings = Seq(
   scalacOptions ++= (if (scalaBinaryVersion.value != "2.13") Seq("-Ypartial-unification") else Seq())
 )
 
-lazy val CatsVersion = "2.0.0"
-lazy val CatsEffectVersion = "2.0.0"
+lazy val CatsVersion = "2.4.2"
+lazy val CatsEffectVersion = "2.3.3"
 lazy val ScalaLoggingVersion = "3.9.2"
 lazy val ScalatestVersion = "3.2.3"
 lazy val CommonsIoVersion = "2.0.1"

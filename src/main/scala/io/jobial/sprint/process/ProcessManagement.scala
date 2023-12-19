@@ -19,6 +19,10 @@ case class ProcessInfo[F[_] : Sync](
   commandLine: List[String]
 ) extends CatsUtils[F] {
   def getOutput = delay(IOUtils.toString(process.getInputStream))
+  
+  def info = process.info
+  
+  def pid = process.pid
 }
 
 case class ProcessContext(
@@ -72,7 +76,7 @@ trait ProcessManagement[F[_]] extends CatsUtils[F] with Logging[F] {
         }
       } >> pure(process)
 
-  def runProcess(command: Seq[String])(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
+  def runProcess(command: Seq[String])(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]): F[ProcessInfo[F]] =
     for {
       process <- delay {
         val builder = new ProcessBuilder(command: _*)
@@ -97,6 +101,9 @@ trait ProcessManagement[F[_]] extends CatsUtils[F] with Logging[F] {
       _ <- debug(s"started $process for ${command.mkString(" ")}")
     } yield ProcessInfo(process, command.toList)
 
+  def runProcess(command: Seq[String], timeout: FiniteDuration)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]): F[ProcessInfo[F]] =
+    runProcess(command)(processContext.copy(timeout = timeout), concurrent, timer)
+    
   def waitForProcessOrKill(process: ProcessInfo[F])
     (implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
     waitForProcessExit(process, processContext.timeout).handleErrorWith { t =>
@@ -120,6 +127,12 @@ trait ProcessManagement[F[_]] extends CatsUtils[F] with Logging[F] {
   def runProcessAndWait(command: String*)
     (implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]): F[ProcessInfo[F]] =
     runProcessAndWait(command.toList)
+
+  def runProcessAndWait(command: List[String], timeout: FiniteDuration)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]): F[ProcessInfo[F]] =
+    runProcessAndWait(command)(processContext.copy(timeout = timeout), concurrent, timer)
+
+  def runProcessAndWait(command: List[String], timeout: FiniteDuration, directory: String)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]): F[ProcessInfo[F]] =
+    runProcessAndWait(command)(processContext.copy(timeout = timeout, directory = Some(directory)), concurrent, timer)
 
   def sync(args: String*)(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
     runProcessAndWait("/usr/bin/sync" :: args.toList)

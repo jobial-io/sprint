@@ -16,7 +16,7 @@ name := "sprint"
 ThisBuild / organization := "io.jobial"
 ThisBuild / crossScalaVersions := Seq("2.12.15", "2.13.8")
 ThisBuild / scalaVersion := "2.13.8"
-ThisBuild / version := "0.3.1"
+ThisBuild / version := "0.3.2"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
 ThisBuild / javacOptions ++= Seq("-source", "11", "-target", "11")
 ThisBuild / Test / packageBin / publishArtifact := true
@@ -44,7 +44,7 @@ lazy val CatsVersion = "2.6.1"
 lazy val CatsEffectVersion = "2.5.3"
 lazy val ScalaLoggingVersion = "3.9.2"
 lazy val ScalatestVersion = "3.2.3"
-lazy val CommonsIoVersion = "2.0.1"
+lazy val CommonsIoVersion = "2.8.0"
 
 lazy val root: Project = project
   .in(file("."))

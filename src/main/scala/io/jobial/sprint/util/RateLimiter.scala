@@ -26,8 +26,8 @@ class RateLimiter[F[_]](
 
   def execute[A](f: => F[A]) =
     for {
-      waitTime <- timeAccumulated.modify(a => (a + accumulationUnit, a)) // add a unit to the accumulated wait time
-      _ <- whenA(waitTime.length > 0)(sleep(waitTime) >> timeAccumulated.update(_ - waitTime)) // if previously accumulated time is positive, wait before starting execution
+      waitingTime <- timeAccumulated.modify(a => (a + accumulationUnit, a)) // add a unit to the accumulated wait time
+      _ <- whenA(waitingTime.length > 0)(sleep(waitingTime) >> timeAccumulated.update(_ - waitingTime)) // if previously accumulated time is positive, wait before starting execution
       _ <- semaphore.acquireN(resolution) // acquire the semaphore
       timer <- whenA(allowParallel)(sleep(accumulationUnit)).start // if parallel execution is allowed, start a timer that expires in unit time 
       execution <- f.start // start the execution
@@ -46,13 +46,13 @@ object RateLimiter {
    * Limits rate of evaluation of effects executed through this rate limiter to rate / window at a maximum.
    *
    * @param rate            The rate.
-   * @param window          The time window. Default is 1 second.
-   * @param timeAccumulated The time accumulated before the first execution. A positive time means the execution can start faster at the beginning. 
+   * @param window          The time window. The default is 1 second.
+   * @param timeAccumulated The time accumulated before the first execution. A positive time means the execution can start immediately and at a faster rate at the beginning. 
    *                        A negative time means execution has to be slower at the beginning because some previous executions are assumed to have happened (outside this rate limiter).
-   *                        If not specified, the default assumption is that the first execution can start immediately.
+   *                        If not specified, the default assumption is 0, which means that the first execution can start immediately at executions will start at the specified rate limit.
    * @param allowParallel   Allow more than rate number of executions running at any time.
-   *                        If true, only the rate of the start of execution is limited, irrespective of how long executions last.
-   *                        If false, it is guaranteed that no more than rate number of executions run at any time. The default is true. 
+   *                        If true, only the rate of the start of executions is limited, irrespective of how long executions last. It means that more than any number of executions can run in parallel and only the start rate is limited.
+   *                        If false, it is guaranteed that no more than rate number of executions run at a time. The default is true. 
    * @param resolution      The accuracy at which the rate is calculated. If the rate is an integer, it will be applied completely accurately. 
    *                        If the rate is not an integer, it will be rounded down to 1 / resolution.
    * @param concurrent

@@ -43,9 +43,9 @@ class RateLimiter[F[_]](
 object RateLimiter {
 
   /**
-   * Limits rate of evaluation of effects executed through this rate limiter to rate / window at a maximum.
+   * Limits the rate of evaluation of effects executed through this rate limiter to rate / window.
    *
-   * @param rate            The rate.
+   * @param rate            The rate. Non-integer rates are rounded down to 1 / resolution.
    * @param window          The time window. The default is 1 second.
    * @param timeAccumulated The time accumulated before the first execution. A positive time means the execution can start immediately and at a faster rate at the beginning. 
    *                        A negative time means execution has to be slower at the beginning because some previous executions are assumed to have happened (outside this rate limiter).
@@ -53,7 +53,7 @@ object RateLimiter {
    * @param allowParallel   Allow more than rate number of executions running at any time.
    *                        If true, only the rate of the start of executions is limited, irrespective of how long executions last. It means that more than any number of executions can run in parallel and only the start rate is limited.
    *                        If false, it is guaranteed that no more than rate number of executions run at a time. The default is true. 
-   * @param resolution      The accuracy at which the rate is calculated. If the rate is an integer, it will be applied completely accurately. 
+   * @param resolution      The accuracy at which the effective rate is calculated. If the rate is an integer, it will be applied accurately. 
    *                        If the rate is not an integer, it will be rounded down to 1 / resolution.
    * @param concurrent
    * @param timer

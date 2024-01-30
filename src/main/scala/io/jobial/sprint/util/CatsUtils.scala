@@ -37,7 +37,7 @@ trait CatsUtils[F[_]] {
   def raiseError[A](t: Throwable)(implicit F: MonadErrorWithThrowable[F]) = F.raiseError[A](t)
 
   def delay[A](f: => A)(implicit F: Sync[F]) = F.delay(f)
-  
+
   def defer[A](f: => F[A])(implicit F: Sync[F]) = Sync[F].defer(f)
 
   def liftIO[A](f: IO[A])(implicit F: LiftIO[F]) = F.liftIO(f)
@@ -45,6 +45,8 @@ trait CatsUtils[F[_]] {
   def sleep(duration: FiniteDuration)(implicit F: Timer[F]) = F.sleep(duration)
 
   def start[A](f: F[A])(implicit F: Concurrent[F]) = F.start(f)
+
+  def never[A](implicit F: Async[F]) = F.never[A]
 
   def fromFuture[A](f: => Future[A])(implicit F: Concurrent[F]): F[A] = {
     delay(f).flatMap { f =>
@@ -124,13 +126,13 @@ trait CatsUtils[F[_]] {
 
   def guarantee[A](fa: F[A])(finalizer: F[Unit])(implicit bracket: Bracket[F, Throwable]): F[A] =
     Bracket[F, Throwable].guarantee(fa)(finalizer)
-    
+
   def printLn(msg: String)(implicit sync: Sync[F]) =
     delay(println(msg))
 
   def printStr(msg: String)(implicit sync: Sync[F]) =
     delay(print(msg))
-    
+
   def printColorLn(msg: String)(implicit sync: Sync[F]) =
     printLn(s"${RESET}${msg}${RESET}")
 }

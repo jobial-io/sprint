@@ -38,6 +38,8 @@ class RateLimiter[F[_]](
           execution.join >> semaphore.releaseN(resolution) // if parallel execution is not allowed, wait for the execution and then release the semaphore
       result <- execution.join
     } yield result
+    
+  def apply[A](f: => F[A]) = execute(f)
 }
 
 object RateLimiter {

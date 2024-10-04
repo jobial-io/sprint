@@ -35,7 +35,7 @@ class RateLimiter[F[_]](
         if (allowParallel)
           (timer.join >> semaphore.releaseN(resolution)).start // if parallel execution is allowed, wait for the timer and then release the semaphore
         else
-          execution.join >> semaphore.releaseN(resolution) // if parallel execution is not allowed, wait for the execution and then release the semaphore
+          execution.join.attempt >> semaphore.releaseN(resolution) // if parallel execution is not allowed, wait for the execution and then release the semaphore
       result <- execution.join
     } yield result
     
@@ -73,7 +73,7 @@ object RateLimiter {
     timer: Timer[F]
   ) =
     for {
-      semaphore <- Semaphore[F]((rate * resolution).toLong)
+      semaphore <- Semaphore[F](math.max((rate * resolution).toLong, resolution))
       timeAccumulated <- Ref.of(-timeAccumulated.getOrElse(0.nanos))
     } yield new RateLimiter(rate, window, timeAccumulated, allowParallel, semaphore, resolution)
 
